@@ -1,0 +1,49 @@
+SELECT
+date,
+visitStartTime,
+fullVisitorId,
+id_client,
+pmu_site,
+SOURCE
+
+FROM(
+
+SELECT
+*
+FROM(
+
+/*  TABLE MISE A PLAT AVEC LES DONNEES DONT ON A BESOIN */
+
+SELECT
+ 
+  visitId AS visitId,
+  visitStartTime AS visitStartTime,
+  date AS date,
+  totals.bounces AS totals_bounces,
+  h.hitNumber AS hits_hitNumber,
+  h.isInteraction AS hits_isInteraction,
+  h.type AS hits_type,
+  fullVisitorId AS fullVisitorId,
+  clientId AS clientId,
+  trafficSource.source as SOURCE,
+max(case when hcd.index =1 then hcd.value end) pmu_site,
+max(case when hcd.index =2 then hcd.value end) page_name,
+max(case when hcd.index =80 then hcd.value end) id_client
+
+FROM
+  `pmu-ga360-194509.159837880.ga_sessions_20211001`,
+    UNNEST(customDimensions) AS cd,
+    UNNEST(hits) AS h,
+    UNNEST(h.customDimensions) AS hcd
+
+GROUP BY
+ 1,2,3,4,5,6,7,8,9,10
+ )
+ 
+ /*  FIN DE LA TABLE MISE A PLAT*/
+
+)
+    
+where pmu_site in ("pmu-connect","mobile-webkit") and (source like "ZANOX%") and page_name = "compte.clic.ouverture2010.form.confirmation.ok"
+
+GROUP by 1,2,3,4,5,6
