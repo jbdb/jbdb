@@ -1,0 +1,59 @@
+SELECT
+date,
+id_client,
+id_affilie,
+SOURCE,
+REGEXP_EXTRACT(SOURCE,r'HIPPIQUE|SPORT|POKER') AS univers_ocmv,
+montant_appro,
+CONCAT(awc1,"_", awc2,"_", awc3) AS AWC,
+clickref,
+
+FROM(
+    SELECT
+    *
+    FROM(
+    /* TABLE MISE A PLAT AVEC LES DONNEES DONT ON A BESOIN */
+        SELECT
+            visitId AS visitId,
+            visitStartTime AS visitStartTime,
+            date AS date,
+            totals.bounces AS totals_bounces,
+            h.hitNumber AS hits_hitNumber,
+            h.isInteraction AS hits_isInteraction,
+            h.type AS hits_type,
+            fullVisitorId AS fullVisitorId,
+            trafficSource.source AS SOURCE,
+            SPLIT(trafficSource.keyword, '_')[SAFE_OFFSET(4)] AS id_affilie,
+            SPLIT(trafficSource.keyword, '_')[SAFE_OFFSET(5)] AS awc1,
+            SPLIT(trafficSource.keyword, '_')[SAFE_OFFSET(6)] AS awc2,
+            SPLIT(trafficSource.keyword, '_')[SAFE_OFFSET(7)] AS awc3,
+            REGEXP_EXTRACT(trafficSource.keyword,r'[^_]+_[^_]+_[^_]+_[^_]+_[^_]+_[^_]+_[^_]+_[^_]+_(.*)') AS clickref,
+            max(case when hcd.index =1 then hcd.value end) pmu_site,
+            max(case when hcd.index =2 then hcd.value end) page_name,
+            max(case when hcd.index =29 then hcd.value end) montant_appro,
+            max(case when hcd.index =80 then hcd.value end) id_client,
+
+        FROM
+            `pmu-ga360-194509.159837880.ga_sessions_*`,
+            UNNEST(customDimensions) AS cd,
+            UNNEST(hits) AS h,
+            UNNEST(h.customDimensions) AS hcd
+
+            /* pour automatiser le nom de table du jour */
+            WHERE _TABLE_SUFFIX = FORMAT_DATE(
+                "%Y%m%d",
+                DATE_SUB(
+                    DATE(@run_time),
+                    INTERVAL 1 DAY))
+            
+        GROUP BY
+        1,2,3,4,5,6,7,8,9,10,11,12,13,14
+    )
+    
+    
+    /* FIN DE LA TABLE MISE A PLAT*/
+)
+    
+WHERE pmu_site in ("pmu-connect","mobile-webkit") AND (source LIKE "ZANOX%") and page_name = "compte.clic.ouverture2010.form.confirmation.ok"
+
+GROUP by 1,2,3,4,5,6,7,8
